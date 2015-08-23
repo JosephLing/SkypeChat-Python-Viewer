@@ -1,0 +1,7 @@
+Created By= Name @ time stamp
+version=0.1
+initailMessageCount = 200
+botCommandsEnabled = False
+botCommandsEnabledUser = False
+keyboardInterruptToExitChat=True
+chatCheckClock = 1
