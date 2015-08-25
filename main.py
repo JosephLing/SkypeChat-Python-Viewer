@@ -3,6 +3,7 @@ from __future__ import unicode_literals
 import datetime
 import time
 import logging
+import os
 __version__ = 0.1
 try:
     import Skype4Py
@@ -41,12 +42,14 @@ class Client():
 
         # Bot stuff
         self.botCommands = {}
-        self.botuserCommands = {}
+        self.botUserCommands = {}
         self.botCommandsEnabled = bool(configData['botCommandsEnabled'])
         self.botCommandsEnabledUser = bool(configData['botCommandsEnabledUser'])
 
     def _getConfigData(self):
-        path = '/'.join(__file__.split('/')[:-1]) + '/config.txt'
+        print os.path.dirname(os.path.realpath(__file__))
+        # path = '/'.join(__file__.split('/')[:-1]) + '/config.txt'
+        path = os.path.dirname(os.path.realpath(__file__)) + '/config.txt'
         logging.info('Getting config file data: ' + path)
         configData = {}
         try:
@@ -54,16 +57,17 @@ class Client():
         except IOError:
             filedata = None
         if not filedata is None:
-            configData = dict([line.replace('\n','').replace(' ', '').split('=') for line in filedata.readlines()])
+            configData = dict([line.replace('\n','').replace(' ', '').split('=') for line in filedata.readlines()[1:]])
             if configData['version'] != str(__version__):
                 logging.warning("Config file is not the save version as the script")
 
         else:
             logging.warning('Config being set to default values as no config file found at ' + path)
-            configData['botCmmandsEnabled'] = False
-            configData['botCommandsUserEnabled'] = False
+            configData['botCommandsEnabled'] = False
+            configData['botCommandsEnabledUser'] = False
             configData['initailMessageCount'] = 200
             configData['chatCheckClock'] = 2
+            configData['keyboardInterruptToExitChat'] = True
         return configData
 
     def getChatPeople(self, ChatName):
@@ -148,12 +152,12 @@ class Client():
                     if Handle == self.CurrentUser:
                         FullName = "Me"
                         if self.botCommandsEnabledUser:
-                            self.botRunUserCommands(Body)
+                            self.botRunUserCommands(Body, Datetime)
                         print(self.getUserChatString(Body, Datetime, FullName))
                     else:
                         print(self.getChatString(Body, Datetime, FullName))
                         if self.botCommandsEnabled:
-                            self.botRunCommand(Body, Handle)
+                            self.botRunCommands(Body, Handle, Datetime)
                 except Skype4Py.errors.SkypeError as e:
                     print(e)
         else:
@@ -224,7 +228,7 @@ class Client():
                     if chatDict[self.chats[k]][1] < TimeStamp:
                         chatDict[self.chats[k]] = [k, TimeStamp]
                         if self.chats[k] in chatError.keys():
-                            self.chatError.pop(self.chats[k])
+                            chatError.pop(self.chats[k])
                             logging.info('Found message data for: ' + self.chats[k])
                 else:
                     chatDict[self.chats[k]] = [k, TimeStamp]
