@@ -157,7 +157,7 @@ class Client():
                     else:
                         print(self.getChatString(Body, Datetime, FullName))
                         if self.botCommandsEnabled:
-                            self.botRunCommands(Body, Handle, Datetime)
+                            self.botRunCommand(Body, Handle, Datetime)
                 except Skype4Py.errors.SkypeError as e:
                     print(e)
         else:
@@ -307,10 +307,13 @@ class Client():
 
     def cmd_viewMostRecentChats(self):
         self.InitialchatSelected(self.UI_selectChat())
+        print '----update mode---'
         self.cmd_updateViewChat()
 
     def cmd_viewAllChats(self):
-        self.InitialchatSelected(self.UI_selectChat())
+        tempChat = self.getChats()
+        self.InitialchatSelected(self.UI_chatSelectView())
+        print '----update mode---'
         self.cmd_updateViewChat()
 
     def cmd_sendMessage(self):
