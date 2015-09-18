@@ -1,7 +1,7 @@
 Created By= Name @ time stamp
 version=0.1
-initailMessageCount = 200
-botCommandsEnabled = False
-botCommandsEnabledUser = False
+initailMessageCount = 25
+botCommandsEnabled = True
+botCommandsEnabledUser = True
 keyboardInterruptToExitChat=True
 chatCheckClock = 1

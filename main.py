@@ -112,34 +112,21 @@ class Client():
         return '{0} <{1}>{2}'.format(datetime.datetime.fromtimestamp(int(Datetime)).strftime('%Y/%m/%d %H:%M:%S'), FullName.replace(' ', ''), Body)
 
 
-    def UI_chatSelectView(self):
-        i = 0
-        chatKeys = []
-        for chat in self.chats.keys():
-            print self.chats[chat] + " : " + str(i)
-            chatKeys.append(chat)
-            i += 1
-
-        userInput = self.validateChatId(i)
-        if userInput is None:
-            return None
-        else:
-            return chatKeys[userInput]
 
     def InitialchatSelected(self, chat):
         if not chat is None:
             print chat
             print self.chats[chat]
             chatMessages = self.skype._DoCommand('GET CHAT {0} CHATMESSAGES'.format(chat)).split('CHATMESSAGES')[1].replace(' ', '').split(',')
+            self.chatIndex = len(chatMessages)
             if len(chatMessages) > self.initailMessageCount:
                 chatMessages = chatMessages[:len(chatMessages)-self.initailMessageCount]
                 print 'Reducing the size of the chat down to {0}'.format(self.initailMessageCount)
-            self.chatIndex = len(chatMessages)
             logging.info('Chat Index = ' + str(self.chatIndex))
             self.chatId = chat
-            self.outputCurrentMessages(chatMessages, live=False)
+            self.outputCurrentMessages(chatMessages, chat, live=False)
 
-    def outputCurrentMessages(self, chatMessages, live=True):
+    def outputCurrentMessages(self, chatMessages, chatId, live=True):
         chatMessages.reverse()
         if live:
             for chatMessage in chatMessages:
@@ -152,12 +139,13 @@ class Client():
                     if Handle == self.CurrentUser:
                         FullName = "Me"
                         if self.botCommandsEnabledUser:
-                            self.botRunUserCommands(Body, Datetime)
+                            self.botRunUserCommands(chatId, body=Body, datatime=Datetime, handle=Handle)
                         print(self.getUserChatString(Body, Datetime, FullName))
                     else:
                         print(self.getChatString(Body, Datetime, FullName))
                         if self.botCommandsEnabled:
-                            self.botRunCommand(Body, Handle, Datetime)
+                            print 'workign'
+                            self.botRunCommand(chatId, body=Body, datatime=Datetime, handle=Handle)
                 except Skype4Py.errors.SkypeError as e:
                     print(e)
         else:
@@ -186,7 +174,6 @@ class Client():
 
         if self.chatId is None:
             raise Exception("self.chatId is not defined make sure to run self.InitialchatSelected before running")
-
         chatMessages = self.skype._DoCommand('GET CHAT {0} CHATMESSAGES'.format(self.chatId)).split('CHATMESSAGES')[1].replace(' ', '').split(',')
         #print 'UPDATE Chat Index = ' + str(self.chatIndex)
         old_chatMessagesLength = len(chatMessages)
@@ -194,16 +181,21 @@ class Client():
         if len(chatMessages) != 0:
             self.chatIndex = self.chatIndex + (old_chatMessagesLength - self.chatIndex)
             #print 'VALUE RESET Chat Index = ' + str(self.chatIndex)
-        self.outputCurrentMessages(chatMessages)
+        self.outputCurrentMessages(chatMessages, self.chatId)
 
 
-    def botRunUserCommands(self, bodyMessage, timeStamp):
+    def botRunUserCommands(self, chatId, **kwargs):
+        bodyMessage = kwargs['body'].replace(' ', '')
         if bodyMessage in self.botUserCommands.keys():
-            self.botUserCommands[bodyMessage](timeStamp)
+            self.botUserCommands[bodyMessage](chatId, **kwargs)
 
-    def botRunCommand(self, bodyMessage, Handle, fullName, timeStamp):
+    def botRunCommand(self, chatId, **kwargs):
+        bodyMessage = kwargs['body'].replace(' ', '')
         if bodyMessage in self.botCommands.keys():
-            self.botCommands[bodyMessage](Handle, fullName, timeStamp)
+            print 'workign as well!!!!'
+            self.botCommands[bodyMessage](chatId, **kwargs)
+        else:
+            print 'no command found'
 
     def getUserStatus(self):
         return ["{0}: {1}".format(self.contacts[k], self.skype._DoCommand('GET USER {0} ONLINESTATUS'.format(k)).split('ONLINESTATUS')[1]) for k in self.contacts]
@@ -239,6 +231,21 @@ class Client():
 
         #print '\n'.join(['{0}:{1}'.format(k, chatDict[k]) for k in chatDict.keys()])
         return chatDict
+
+    def getAllChats(self):
+        i = 0
+        chatKeys = []
+        for chat in self.chats.keys():
+            print self.chats[chat] + " : " + str(i)
+            chatKeys.append(chat)
+            i += 1
+
+        userInput = self.validateChatId(i)
+        if userInput is None:
+            return None
+        else:
+            return chatKeys[userInput]
+
 
     def validateChatId(self, maxCount, Tries=5):
         userValidInput = False
@@ -312,7 +319,7 @@ class Client():
 
     def cmd_viewAllChats(self):
         tempChat = self.getChats()
-        self.InitialchatSelected(self.UI_chatSelectView())
+        self.InitialchatSelected(self.getAllChats())
         print '----update mode---'
         self.cmd_updateViewChat()
 
@@ -351,8 +358,31 @@ class Client():
             elif len(cmd) > 0:
                 print 'Command not found'
 
+    def addBotCommand(self, functionName, cmdtype='contacts'):
+        key = '!' + functionName.__name__
+        if cmdtype == 'me':
+            if key in self.botUserCommands:
+                logging.warning('Commmand {0} is already in botUserCommands as is going to be overwritten')
+            self.botUserCommands[key] = functionName
+        elif cmdtype == 'contacts':
+            if key in self.botCommands:
+                logging.warning('Commmand {0} is already in botCommands as is going to be overwritten')
+            self.botCommands[key] = functionName
+        else:
+            raise Exception("Unknown command type")
+
 def main():
     test = Client()
+
+
+    def currentTasks(keyId, **kwargs):
+        test.skype._DoCommand('CHATMESSAGE {0} {1}'.format(keyId, 'Reducing docker image size down'))
+
+    test.addBotCommand(currentTasks)
+    print test.botUserCommands
+    print test.botCommands
+    print test.botCommandsEnabled
+    print test.chatCheckClock
     test.cmd_main()
 
 if __name__ == "__main__":
